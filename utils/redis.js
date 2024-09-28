@@ -1,4 +1,5 @@
 const redis = require('redis');
+const util = require('util');
 
 class RedisClient {
   constructor() {
@@ -7,35 +8,33 @@ class RedisClient {
       console.error('An error occured: ', error);
       this.connectionError = error;
     });
-  };
+    this.asyncGet = util.promisify(this.client.get).bind(this.client);
+    this.setAsync = util.promisify(this.client.set).bind(this.client);
+    this.setExAsync = util.promisify(this.client.setex).bind(this.client);
+    this.asyncDel = util.promisify(this.client.del).bind(this.client);
+  }
 
   isAlive() {
     if (this.connectionError) return false;
-    else return true;
-    // return new Promise((resolve, reject) => {
-    //   if (this.connectionError) return false;
-    //   else {
-    //     this.client.on('connect', () => resolve(true));
-    //     this.client.on('error', (error) => resolve(false));
-    //   };
-    // });
-  };
+    return true;
+  }
 
   async get(key) {
-    const value = await this.client.get(key);
-    return value;
-  };
+    try {
+      return await this.asyncGet(key);
+    } catch (error) {
+      return null;
+    }
+  }
 
   async set(key, value, durationInSeconds) {
-    this.client.setex(key, durationInSeconds, value);
-  };
+    await this.setExAsync(key, durationInSeconds, value);
+  }
 
   async del(key) {
-    this.client.del(key);
-  };
-
-};
-
+    this.asyncDel(key);
+  }
+}
 const redisClient = new RedisClient();
 
 module.exports = redisClient;
