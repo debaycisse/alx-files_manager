@@ -7,10 +7,14 @@ const URI = `mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`;
 
 class DBClient {
   constructor() {
-    this.mongoClient = new MongoClient(URI, { useUnifiedTopology: true });
+    this.mongoClient = new MongoClient(URI, {
+      useUnifiedTopology: true,
+      useNewUrlParser: true,
+    });
     this.isConnected = false;
 
-    this.mongoClient.connect()
+    this.mongoClient
+      .connect()
       .then(() => {
         this.isConnected = true;
       })
