@@ -4,8 +4,7 @@ const dbClient = require('../utils/db');
 class UsersController {
   static postNew(request, response) {
     try {
-      const email  = request.body.email;
-      const  password  = request.body.password;
+      const { email, password } = request.body;
       const db = dbClient.mongoClient.db();
       const usersCollection = db.collection('users');
       if (!email) {
