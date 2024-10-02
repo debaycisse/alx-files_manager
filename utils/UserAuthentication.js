@@ -30,20 +30,30 @@ class UserAuthentication {
   }
 
   static async getUser(request) {
-    const token = request.header('X-Token');
-    const userId = await redisClient.get(`auth_${token}`);
-    const userFound = await usersCollection.findOne({
-      _id: ObjectId(userId),
-    });
+    try {
+      const token = request.header('X-Token');
+      const userId = await redisClient.get(`auth_${token}`);
+      const userFound = await usersCollection.findOne({
+        _id: ObjectId(userId),
+      });
 
-    return userFound;
+      return userFound;
+    } catch (err) {
+      return null;
+    }
   }
 
   static async ownsTheDoc(request) {
     const userObj = await this.getUser(request);
+    let userId;
+    try {
+      userId = ObjectId(userObj._id);
+    } catch (err) {
+      userId = '';
+    }
     const docId = request.params.id;
     const doc = await filesCollection.findOne({
-      _id: ObjectId(docId), userId: ObjectId(userObj._id),
+      _id: ObjectId(docId), userId,
     });
 
     if (doc) return doc;

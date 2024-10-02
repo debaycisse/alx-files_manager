@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const uuid = require('uuid');
 const path = require('path');
 const { ObjectId } = require('mongodb');
+const mime = require('mime-types');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
 const UserAuthentication = require('../utils/UserAuthentication');
@@ -389,7 +390,6 @@ class FilesController {
     const isAvailable = await Documents.isAvailable(request);
     const user = await UserAuthentication.getUser(request);
     const docOwner = await UserAuthentication.ownsTheDoc(request, response);
-
     if (!isAvailable) {
       return response.status(404).json({
         error: 'Not found',
@@ -413,6 +413,13 @@ class FilesController {
         error: 'Not found',
       });
     }
+
+    const fileMimeType = mime.lookup(isAvailable.name);
+    const fileExtension = mime.extension(fileMimeType);
+    const fileContentType = mime.contentType(fileExtension);
+    const fileContent = await fs.readFile(isAvailable.localPath, { encoding: 'utf8' });
+    response.setHeader('Content-Type', fileContentType);
+    return response.send(fileContent);
   }
 }
 
