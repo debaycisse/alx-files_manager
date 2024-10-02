@@ -7,6 +7,7 @@ const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
 const UserAuthentication = require('../utils/UserAuthentication');
 const Documents = require('../utils/Documents');
+const fileQueue = require('../worker');
 
 const { mongoClient } = dbClient;
 const db = mongoClient.db();
@@ -129,6 +130,10 @@ class FilesController {
                       filesCollection
                         .insertOne(fileObj)
                         .then((insertedFileObj) => {
+                          fileQueue.add({
+                            fieldId: fileObj.insertedId,
+                            userId: fileObj.ops[0].userId,
+                          });
                           response.statusCode = 201;
                           return response.json({
                             id: insertedFileObj.insertedId,
@@ -390,6 +395,7 @@ class FilesController {
     const isAvailable = await Documents.isAvailable(request);
     const user = await UserAuthentication.getUser(request);
     const docOwner = await UserAuthentication.ownsTheDoc(request, response);
+    const { size } = request.query;
     if (!isAvailable) {
       return response.status(404).json({
         error: 'Not found',
@@ -414,12 +420,22 @@ class FilesController {
       });
     }
 
+    let fileName = isAvailable.localPath;
+    if (size) {
+      fileName = `${isAvailable.localPath}_${size}`;
+    }
+
     const fileMimeType = mime.lookup(isAvailable.name);
     const fileExtension = mime.extension(fileMimeType);
     const fileContentType = mime.contentType(fileExtension);
-    const fileContent = await fs.readFile(isAvailable.localPath, { encoding: 'utf8' });
+    let fileContent;
+    if (fileExtension === 'txt') {
+      fileContent = await fs.readFile(fileName, { encoding: 'utf8' });
+    } else {
+      fileContent = await fs.readFile(fileName);
+    }
     response.setHeader('Content-Type', fileContentType);
-    return response.send(fileContent);
+    return response.end(fileContent);
   }
 }
 

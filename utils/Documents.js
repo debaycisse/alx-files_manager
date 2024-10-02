@@ -16,6 +16,21 @@ class Documents {
 
     return theDocObj;
   }
+
+  static async findDoc(DocId, userId) {
+    try {
+      const filter = {
+        _id: ObjectId(DocId),
+        userId: ObjectId(userId),
+      };
+      const DocObj = await filesCollection.findOne(filter);
+
+      if (DocObj) return DocObj;
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
 }
 
 module.exports = Documents;
