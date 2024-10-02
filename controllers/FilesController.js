@@ -4,6 +4,7 @@ const path = require('path');
 const { ObjectId } = require('mongodb');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
+const UserAuthentication = require('../utils/UserAuthentication');
 
 const { mongoClient } = dbClient;
 const db = mongoClient.db();
@@ -316,6 +317,71 @@ class FilesController {
           tokenError: err.message,
         });
       });
+  }
+
+  static async putPublish(request, response) {
+    await UserAuthentication.isValid(request, response);
+    const doc = await UserAuthentication.ownsTheDoc(request);
+
+    if (!doc) {
+      return response.status(404).json({
+        error: 'Not found',
+      });
+    }
+    const filter = {
+      _id: ObjectId(doc._id),
+      userId: ObjectId(doc.userId),
+    };
+
+    const updateDoc = {
+      $set: { isPublic: true },
+    };
+
+    await filesCollection.updateOne(filter, updateDoc);
+    const updatedDoc = await UserAuthentication.ownsTheDoc(request, response);
+
+    return response.status(200).json({
+      id: updatedDoc._id,
+      userId: updatedDoc.userId,
+      name: updatedDoc.name,
+      type: updatedDoc.type,
+      isPublic: updatedDoc.isPublic,
+      parentId: updatedDoc.parentId,
+    });
+  }
+
+  static async putUnpublish(request, response) {
+    await UserAuthentication.isValid(request, response);
+    const doc = await UserAuthentication.ownsTheDoc(request);
+    const docId = request.params.id;
+    const userId = await UserAuthentication.getUser(request, response);
+
+    if (!doc) {
+      return response.status(404).json({
+        error: 'Not found',
+      });
+    }
+
+    const filter = {
+      _id: ObjectId(docId),
+      userId: ObjectId(userId._id),
+    };
+
+    const updateDoc = {
+      $set: { isPublic: false },
+    };
+
+    await filesCollection.updateOne(filter, updateDoc);
+    const updatedDoc = await UserAuthentication.ownsTheDoc(request, response);
+
+    return response.status(200).json({
+      id: updatedDoc._id,
+      userId: updatedDoc.userId,
+      name: updatedDoc.name,
+      type: updatedDoc.type,
+      isPublic: updatedDoc.isPublic,
+      parentId: updatedDoc.parentId,
+    });
   }
 }
 

@@ -42,4 +42,12 @@ router.get('/files', (request, response) => {
   FilesController.getIndex(request, response);
 });
 
+router.put('/files/:id/publish', async (request, response) => {
+  await FilesController.putPublish(request, response);
+});
+
+router.put('/files/:id/unpublish', async (request, response) => {
+  await FilesController.putUnpublish(request, response);
+});
+
 module.exports = router;
