@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import AppController from '../controllers/AppController';
 import UsersController from '../controllers/UsersController';
-import { response } from '../server';
 import AuthController from '../controllers/AuthController';
 import FilesController from '../controllers/FilesController';
 

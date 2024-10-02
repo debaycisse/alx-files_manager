@@ -1,18 +1,18 @@
-const fs = require("fs").promises;
-const uuid = require("uuid");
-const path = require("path");
-const { ObjectId } = require("mongodb");
-const redisClient = require("../utils/redis");
-const dbClient = require("../utils/db");
+const fs = require('fs').promises;
+const uuid = require('uuid');
+const path = require('path');
+const { ObjectId } = require('mongodb');
+const redisClient = require('../utils/redis');
+const dbClient = require('../utils/db');
 
-const mongoClient = dbClient.mongoClient;
+const { mongoClient } = dbClient;
 const db = mongoClient.db();
-const usersCollection = db.collection("users");
-const filesCollection = db.collection("files");
+const usersCollection = db.collection('users');
+const filesCollection = db.collection('files');
 
 class FilesController {
   static postUpload(request, response) {
-    const token = request.header("X-Token");
+    const token = request.header('X-Token');
     const key = `auth_${token}`;
 
     redisClient
@@ -22,21 +22,23 @@ class FilesController {
           .findOne({ _id: new ObjectId(userId) })
           .then((userObj) => {
             if (!userObj) {
-              return response.status(401).json({ error: "Unauthorized" });
+              return response.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { name, type, parentId, isPublic, data } = request.body;
+            const {
+              name, type, parentId, isPublic, data,
+            } = request.body;
             if (!name) {
-              return response.status(400).json({ error: "Missing name" });
+              return response.status(400).json({ error: 'Missing name' });
             }
 
-            const supportedTypes = ["file", "image", "folder"];
+            const supportedTypes = ['file', 'image', 'folder'];
             if (!type || !supportedTypes.includes(type)) {
-              return response.status(400).json({ error: "Missing type" });
+              return response.status(400).json({ error: 'Missing type' });
             }
 
-            if (!data && type !== "folder") {
-              return response.status(400).json({ error: "Missing data" });
+            if (!data && type !== 'folder') {
+              return response.status(400).json({ error: 'Missing data' });
             }
 
             if (parentId) {
@@ -46,12 +48,12 @@ class FilesController {
                   if (!folderDoc) {
                     return response
                       .status(400)
-                      .json({ error: "Parent not found" });
+                      .json({ error: 'Parent not found' });
                   }
-                  if (folderDoc.type !== "folder") {
+                  if (folderDoc.type !== 'folder') {
                     return response
                       .status(400)
-                      .json({ error: "Parent is not a folder" });
+                      .json({ error: 'Parent is not a folder' });
                   }
                   return null;
                 })
@@ -59,7 +61,7 @@ class FilesController {
                   response.statusCode = 500;
                   return response.json({
                     error:
-                      "Internal Server Error - folder's existence checking failed in MongoDB",
+                      'Internal Server Error - folder\'s existence checking failed in MongoDB',
                   });
                 });
             }
@@ -68,7 +70,7 @@ class FilesController {
             if (parentId) parentIdObj = new ObjectId(parentId);
 
             // Handles folder creation
-            if (type === "folder") {
+            if (type === 'folder') {
               const folderObj = {
                 userId: new ObjectId(userObj._id),
                 name,
@@ -93,12 +95,12 @@ class FilesController {
                   response.statusCode = 500;
                   return response.json({
                     error:
-                      "Internal Server Error - couldn't create a new folder document in the DB",
+                      'Internal Server Error - couldn\'t create a new folder document in the DB',
                   });
                 });
-            } else if (type === "file" || type === "image") {
+            } else if (type === 'file' || type === 'image') {
               // Handles other types, such as files and images creation
-              const defaultPath = "/tmp/files_manager";
+              const defaultPath = '/tmp/files_manager';
               const localPath = process.env.FOLDER_PATH || defaultPath;
               let fileLocalPath;
 
@@ -106,7 +108,7 @@ class FilesController {
               fs.mkdir(localPath, { recursive: true })
                 .then(() => {
                   fileLocalPath = path.join(localPath, uuid.v4());
-                  const content = Buffer.from(data, "base64");
+                  const content = Buffer.from(data, 'base64');
 
                   // Write the file
                   fs.writeFile(fileLocalPath, content)
@@ -137,14 +139,14 @@ class FilesController {
                         .catch(() => {
                           response.statusCode = 500;
                           return response.json({
-                            error: "Internal Server Error",
+                            error: 'Internal Server Error',
                           });
                         });
                     })
                     .catch(() => {
                       response.statusCode = 401;
                       return response.json({
-                        error: "Unauthorized",
+                        error: 'Unauthorized',
                       });
                     });
                 })
@@ -152,7 +154,7 @@ class FilesController {
                   response.statusCode = 500;
                   return response.json({
                     error:
-                      "Internal Server Error - couldn't create a new local path",
+                      'Internal Server Error - couldn\'t create a new local path',
                   });
                 });
             }
@@ -160,20 +162,20 @@ class FilesController {
           })
           .catch(() => {
             response.statusCode = 401;
-            return response.json({ error: "Unauthorized " });
+            return response.json({ error: 'Unauthorized ' });
           });
       })
       .catch(() => {
         response.statusCode = 500;
         return response.json({
-          error: "Internal Server Error - couldn't cache token",
+          error: 'Internal Server Error - couldn\'t cache token',
         });
       });
   }
 
   static getShow(request, response) {
-    const documentId = request.params.id || "";
-    const token = request.header("X-Token");
+    const documentId = request.params.id || '';
+    const token = request.header('X-Token');
 
     redisClient
       .get(`auth_${token}`)
@@ -181,7 +183,7 @@ class FilesController {
         if (!userId) {
           response.statusCode = 401;
           return response.json({
-            error: "Unauthorized",
+            error: 'Unauthorized',
           });
         }
         usersCollection
@@ -190,7 +192,7 @@ class FilesController {
             if (!userFound) {
               response.statusCode = 401;
               return response.json({
-                error: "Unauthorized",
+                error: 'Unauthorized',
               });
             }
 
@@ -204,7 +206,7 @@ class FilesController {
                 if (!foundFile) {
                   response.statusCode = 404;
                   return response.json({
-                    error: "Not found",
+                    error: 'Not found',
                   });
                 }
                 response.statusCode = 200;
@@ -221,15 +223,16 @@ class FilesController {
                 response.statusCode = 500;
                 return response.json({
                   error:
-                    "Internal Server Error - error while retrieving file document",
+                    'Internal Server Error - error while retrieving file document',
                 });
               });
+            return null;
           })
           .catch(() => {
             response.statusCode = 500;
             return response.json({
               error:
-                "Internal Server Error - error while retriving user document",
+                'Internal Server Error - error while retriving user document',
             });
           });
         return null;
@@ -238,14 +241,14 @@ class FilesController {
         response.statusCode = 500;
         return response.json({
           error:
-            "Internal Server Error - Error while retrieving authentication token",
+            'Internal Server Error - Error while retrieving authentication token',
         });
       });
   }
 
   static getIndex(request, response) {
-    const token = request.header("X-Token");
-    const parentId = request.query.parentId;
+    const token = request.header('X-Token');
+    const { parentId } = request.query;
     const page = request.query.page || 0;
     let parentIdObj = 0;
     if (parentId) parentIdObj = ObjectId(parentId);
@@ -254,7 +257,7 @@ class FilesController {
       .then((userId) => {
         if (!userId) {
           return response.status(401).json({
-            error: "Unauthorized",
+            error: 'Unauthorized',
           });
         }
         usersCollection
@@ -262,49 +265,54 @@ class FilesController {
           .then((userFound) => {
             if (!userFound) {
               return response.status(401).json({
-                error: "Unauthorized",
+                error: 'Unauthorized',
               });
             }
-            filesCollection
-              .find({ parentId: parentIdObj, userId: userFound._id })
-                .then((filesFound) => {
-                  if (!filesFound) return response.status(404).json([]);
+            const maxItems = 20;
+            const pipeline = [
+              { $match: { parentId: parentIdObj, userId: userFound._id } },
+              {
+                $project: {
+                  id: '$_id', userId: 1, name: 1, type: 1, isPublic: 1, parentId: 1, _id: 0,
+                },
+              },
+              { $limit: maxItems },
+              { $skip: page * maxItems },
+            ];
+            filesCollection.aggregate(pipeline).toArray().then((filesArray) => {
+              const reorderedFilesArray = filesArray.map((file) => ({
+                id: file.id,
+                userId: file.userId,
+                name: file.name,
+                type: file.type,
+                isPublic: file.isPublic,
+                parentId: file.parentId,
+              }));
 
-                  const maxItems = 20;
-                  const lastPage = maxItems * page + maxItems + 1;
-                  let i = page;
-                  const documents = [];
-                  while (i < lastPage && filesFound[i]) {
-                    const fileObj = {
-                      id: filesFound[i]._id,
-                      userId: filesFound[i].userId,
-                      name: filesFound[i].name,
-                      type: filesFound[i].type,
-                      isPublic: filesFound[i].isPublic,
-                      parentId: filesFound[i].parentId
-                    };
-                    documents.push(fileObj);
-                    i += 1;
-                  }
-                  return response.status(200).json({documents});
-                })
-                .catch((err) => {
-                  return response.status(500).json({
-                    error: 'Internal Server Error',
-                    fileCollectionError: err.message,
-                  });
+              return response.status(200).json(reorderedFilesArray);
+            })
+              .catch((err) => {
+                response.statusCode = 500;
+                return response.json({
+                  error: 'Internal Server Error',
+                  fileAggragateError: err.message,
                 });
+              });
+            return null;
           })
           .catch((err) => {
-            return response.status(500).json({
-              error: "Internal Server Error",
+            response.statusCode = 500;
+            return response.json({
+              error: 'Internal Server Error',
               userCollectionError: err.message,
             });
           });
+        return null;
       })
       .catch((err) => {
-        return response.status(500).json({
-          error: "Internal Server Error",
+        response.statusCode = 500;
+        return response.json({
+          error: 'Internal Server Error',
           tokenError: err.message,
         });
       });
