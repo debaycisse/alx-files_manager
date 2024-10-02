@@ -50,4 +50,8 @@ router.put('/files/:id/unpublish', async (request, response) => {
   await FilesController.putUnpublish(request, response);
 });
 
+router.get('/files/:id/data', async (request, response) => {
+  await FilesController.getFile(request, response);
+});
+
 module.exports = router;

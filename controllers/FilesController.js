@@ -5,6 +5,7 @@ const { ObjectId } = require('mongodb');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
 const UserAuthentication = require('../utils/UserAuthentication');
+const Documents = require('../utils/Documents');
 
 const { mongoClient } = dbClient;
 const db = mongoClient.db();
@@ -382,6 +383,36 @@ class FilesController {
       isPublic: updatedDoc.isPublic,
       parentId: updatedDoc.parentId,
     });
+  }
+
+  static async getFile(request, response) {
+    const isAvailable = await Documents.isAvailable(request);
+    const user = await UserAuthentication.getUser(request);
+    const docOwner = await UserAuthentication.ownsTheDoc(request, response);
+
+    if (!isAvailable) {
+      return response.status(404).json({
+        error: 'Not found',
+      });
+    }
+
+    if (!isAvailable.isPublic && (!user || !docOwner)) {
+      return response.status(404).json({
+        error: 'Not found',
+      });
+    }
+
+    if (isAvailable.type === 'folder') {
+      return response.status(400).json({
+        error: 'A folder doesn\'t have content',
+      });
+    }
+
+    if (!isAvailable.localPath) {
+      return response.status(404).json({
+        error: 'Not found',
+      });
+    }
   }
 }
 
